@@ -46,7 +46,7 @@ const state = {
   budget: null,
   goals: [],
   goalSurplus: {},
-  userName: 'Chidike',
+  userName: 'Alexander',
   currentView: 'daily',
   selectedDate: new Date(),
   currentYear: new Date().getFullYear(),
