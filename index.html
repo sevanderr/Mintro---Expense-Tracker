@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>CoinWise — Smart Expense Tracker</title>
+  <title>Mintro — Spend Smarter</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
@@ -16,14 +16,27 @@
     <div class="orb orb--3"></div>
   </div>
 
-  <div class="app">
-    <header class="header">
-      <h1 class="logo">CoinWise</h1>
+  <header class="header">
+    <div class="header__inner">
+      <div class="header__brand">
+        <h1 class="logo">Mintro</h1>
+        <span class="tagline">Spend smarter. Budget better. Stay in control.</span>
+      </div>
       <div class="header__actions">
         <button class="header-btn" id="exportBtn" aria-label="Export CSV" title="Export CSV">⬇</button>
         <button class="header-btn theme-toggle" id="themeToggle" aria-label="Toggle theme">🌙</button>
+        <div class="header__profile">
+          <div class="avatar" id="userAvatar">C</div>
+          <span class="username" id="userNameDisplay">Chidike</span>
+        </div>
       </div>
-    </header>
+    </div>
+  </header>
+
+  <div class="app">
+    <section class="welcome" id="welcomeSection">
+      <p class="welcome__text" id="welcomeText">Welcome back, Chidike. Track every penny, it counts!</p>
+    </section>
 
     <section class="dashboard" id="dashboard">
       <div class="card" id="cardTotal">
@@ -182,6 +195,10 @@
       </div>
     </div>
   </div>
+
+    <footer class="footer">
+      <p>© 2026 Mintro — Chidike Alexander</p>
+    </footer>
 
   <script src="app.js"></script>
 </body>

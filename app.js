@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════
-   CoinWise — Smart Expense Tracker
+   Mintro — Spend Smarter
    ═══════════════════════════════════════════════════ */
 
 /* ─── Constants ──────────────────────────────────── */
@@ -46,6 +46,7 @@ const state = {
   budget: null,
   goals: [],
   goalSurplus: {},
+  userName: 'Chidike',
   currentView: 'daily',
   selectedDate: new Date(),
   currentYear: new Date().getFullYear(),
@@ -80,6 +81,7 @@ function cacheDom() {
     'goalPanel', 'goalBackdrop', 'goalPanelClose', 'goalPanelTitle',
     'goalName', 'goalTarget', 'goalDate', 'saveGoalBtn', 'deleteGoalBtn',
     'fab', 'cardTotal', 'cardBudget', 'cardStatus', 'cardGoal',
+    'userAvatar', 'userNameDisplay', 'welcomeText',
     'dashEditBudget', 'dashGoalAction',
   ];
   ids.forEach(id => { dom[id] = $(`#${id}`); });
@@ -620,6 +622,16 @@ function renderDashboard() {
 
 /* ─── Render All ─────────────────────────────────── */
 
+/* ─── Profile ──────────────────────────────────────── */
+
+function updateProfile() {
+  const initial = state.userName.charAt(0).toUpperCase();
+  dom.userAvatar.textContent = initial;
+  dom.userNameDisplay.textContent = state.userName;
+  dom.welcomeText.textContent = `Welcome back, ${state.userName}. Track every penny, it counts!`;
+  document.title = `Mintro — ${state.userName}'s Tracker`;
+}
+
 function renderAll() {
   updateViewLabel();
 
@@ -938,6 +950,7 @@ function init() {
   // Set default date for today
   dom.expenseDate.value = toDateStr(new Date());
 
+  updateProfile();
   renderAll();
 
   // Set active pill
