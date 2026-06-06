@@ -26,9 +26,13 @@ const currencyFmt = new Intl.NumberFormat('en-NG', {
   minimumFractionDigits: 2, maximumFractionDigits: 2,
 });
 
-const dateFmt = new Intl.DateTimeFormat('en-US', {
-  month: 'short', day: 'numeric', year: 'numeric',
+const dateFmt = new Intl.DateTimeFormat('en-GB', {
+  day: '2-digit', month: '2-digit', year: 'numeric',
   hour: 'numeric', minute: '2-digit',
+});
+
+const dateOnlyFmt = new Intl.DateTimeFormat('en-GB', {
+  day: '2-digit', month: '2-digit', year: 'numeric',
 });
 
 /* ─── State ──────────────────────────────────────── */
@@ -437,8 +441,9 @@ function renderMonthly() {
 
   const selDay = getDayExpenses(selectedStr);
   const selTotal = getAllTotal(selDay);
+  const displayDate = selectedStr.split('-').reverse().join('/');
   html += `<div class="calendar-summary">
-    You spent <strong>${fmtCurr(selTotal)}</strong> on ${selectedStr}
+    You spent <strong>${fmtCurr(selTotal)}</strong> on ${displayDate}
     ${selDay.length > 0 ? `(${selDay.length} expense${selDay.length > 1 ? 's' : ''})` : ''}
   </div>`;
 
