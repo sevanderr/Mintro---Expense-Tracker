@@ -36,7 +36,7 @@ const dateOnlyFmt = new Intl.DateTimeFormat('en-GB', {
 });
 
 const dailyLabelFmt = new Intl.DateTimeFormat('en-US', {
-  year: 'numeric', month: 'long', day: 'numeric',
+  year: 'numeric', month: 'short', day: 'numeric',
 });
 
 /* ─── State ──────────────────────────────────────── */
