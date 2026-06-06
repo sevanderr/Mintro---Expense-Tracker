@@ -35,6 +35,10 @@ const dateOnlyFmt = new Intl.DateTimeFormat('en-GB', {
   day: '2-digit', month: '2-digit', year: 'numeric',
 });
 
+const dailyLabelFmt = new Intl.DateTimeFormat('en-US', {
+  year: 'numeric', month: 'long', day: 'numeric',
+});
+
 /* ─── State ──────────────────────────────────────── */
 
 const state = {
@@ -42,7 +46,7 @@ const state = {
   budget: null,
   goals: [],
   goalSurplus: {},
-  currentView: 'monthly',
+  currentView: 'daily',
   selectedDate: new Date(),
   currentYear: new Date().getFullYear(),
   currentFilter: 'all',
@@ -328,7 +332,7 @@ function updateViewLabel() {
   const d = state.selectedDate;
   switch (state.currentView) {
     case 'daily':
-      dom.viewLabel.textContent = fmtDate(d.getTime());
+      dom.viewLabel.textContent = dailyLabelFmt.format(d);
       break;
     case 'monthly':
       dom.viewLabel.textContent = `${MONTHS_SHORT[d.getMonth()]} ${d.getFullYear()}`;
@@ -458,7 +462,7 @@ function renderDaily() {
   const total = getAllTotal(dayExp);
 
   let html = `<div class="daily-header">
-    <span class="daily-header__title">Expenses on ${fmtDate(state.selectedDate.getTime())}</span>
+    <span class="daily-header__title">Expenses on ${dailyLabelFmt.format(state.selectedDate)}</span>
     <span class="daily-total">${fmtCurr(total)}</span>
   </div>`;
 
