@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CoinWise — Smart Expense Tracker</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="bg-orbs" aria-hidden="true">
+    <div class="orb orb--1"></div>
+    <div class="orb orb--2"></div>
+    <div class="orb orb--3"></div>
+  </div>
+
+  <div class="app">
+    <header class="header">
+      <h1 class="logo">CoinWise</h1>
+      <div class="header__actions">
+        <button class="header-btn" id="exportBtn" aria-label="Export CSV" title="Export CSV">⬇</button>
+        <button class="header-btn theme-toggle" id="themeToggle" aria-label="Toggle theme">🌙</button>
+      </div>
+    </header>
+
+    <section class="dashboard" id="dashboard">
+      <div class="card" id="cardTotal">
+        <div class="card__icon-wrap"><span class="card__icon">💰</span></div>
+        <div class="card__body">
+          <span class="card__label">Total Spent</span>
+          <span class="card__value" id="dashTotal">₦0.00</span>
+          <span class="card__sub" id="dashTotalSub">This month</span>
+        </div>
+      </div>
+      <div class="card" id="cardBudget">
+        <div class="card__icon-wrap"><span class="card__icon">📊</span></div>
+        <div class="card__body">
+          <span class="card__label">Budget Remaining</span>
+          <div class="card__row">
+            <svg class="mini-ring" width="48" height="48" viewBox="0 0 48 48">
+              <circle class="mini-ring__bg" cx="24" cy="24" r="20" fill="none"/>
+              <circle class="mini-ring__fill" id="budgetRingFill" cx="24" cy="24" r="20" fill="none" stroke-dasharray="125.66" stroke-dashoffset="0"/>
+            </svg>
+            <span class="card__value card__value--sm" id="dashBudgetRemain">—</span>
+          </div>
+          <span class="card__sub" id="dashBudgetSub">Set a budget to track</span>
+        </div>
+        <button class="card__action" id="dashEditBudget">Edit</button>
+      </div>
+      <div class="card" id="cardStatus">
+        <div class="card__icon-wrap"><span class="card__icon">🎯</span></div>
+        <div class="card__body">
+          <span class="card__label">Status</span>
+          <span class="card__value card__value--sm" id="dashStatus">Set a budget</span>
+          <span class="card__sub" id="dashStatusSub">Know where you stand</span>
+        </div>
+      </div>
+      <div class="card" id="cardGoal">
+        <div class="card__icon-wrap"><span class="card__icon">🏆</span></div>
+        <div class="card__body">
+          <span class="card__label">Goal Progress</span>
+          <span class="card__value card__value--sm" id="dashGoalName">No goal set</span>
+          <div class="goal-mini-bar" id="dashGoalBar"><div class="goal-mini-bar__fill" id="dashGoalFill" style="width:0%"></div></div>
+          <span class="card__sub" id="dashGoalSub">Create a savings goal</span>
+        </div>
+        <button class="card__action" id="dashGoalAction">Create</button>
+      </div>
+    </section>
+
+    <section class="toolbar">
+      <div class="view-switcher">
+        <button class="pill pill--active" data-view="monthly">🗓️ Monthly</button>
+        <button class="pill" data-view="daily">📆 Daily</button>
+        <button class="pill" data-view="yearly">📊 Yearly</button>
+      </div>
+      <div class="view-nav" id="viewNav">
+        <button class="nav-btn" id="navPrev">‹</button>
+        <span class="view-label" id="viewLabel">June 2026</span>
+        <button class="nav-btn" id="navNext">›</button>
+      </div>
+    </section>
+
+    <section class="search-section">
+      <div class="search-wrap">
+        <span class="search-icon">🔍</span>
+        <input type="search" id="searchInput" class="search-input" placeholder="Search expenses..." autocomplete="off">
+      </div>
+      <div class="filter-tabs" id="filterTabs" role="tablist"></div>
+    </section>
+
+    <section class="content-area" id="contentArea">
+      <div class="empty-state" id="emptyState">
+        <div class="empty-state__icon">📋</div>
+        <p class="empty-state__text">No expenses yet. Start tracking!</p>
+      </div>
+      <div id="viewContainer"></div>
+    </section>
+
+    <button class="fab" id="fab" aria-label="Add expense">+</button>
+
+    <div class="side-panel" id="expensePanel">
+      <div class="side-panel__backdrop" id="panelBackdrop"></div>
+      <div class="side-panel__sheet" id="panelSheet">
+        <div class="side-panel__header">
+          <h2 class="side-panel__title">New Expense</h2>
+          <button class="side-panel__close" id="panelClose" aria-label="Close">✕</button>
+        </div>
+        <form id="expenseForm" class="expense-form" novalidate>
+          <div class="form-group">
+            <label for="expenseName" class="form-label">Expense name</label>
+            <input type="text" id="expenseName" class="form-input" placeholder="What did you spend on?" autocomplete="off">
+          </div>
+          <div class="form-group">
+            <label for="expenseAmount" class="form-label">Amount (₦)</label>
+            <div class="amount-wrap">
+              <span class="currency-prefix">₦</span>
+              <input type="number" id="expenseAmount" class="form-input amount-input" placeholder="0.00" step="0.01" min="0">
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="expenseCategory" class="form-label">Category</label>
+            <select id="expenseCategory" class="form-input form-select"></select>
+          </div>
+          <div class="form-group" id="dateFieldGroup">
+            <label for="expenseDate" class="form-label">Date</label>
+            <input type="date" id="expenseDate" class="form-input">
+          </div>
+          <div class="form-error" id="formError" role="alert"></div>
+          <button type="submit" class="btn btn--primary" id="addBtn">Add Expense</button>
+        </form>
+      </div>
+    </div>
+
+    <div class="side-panel" id="budgetPanel">
+      <div class="side-panel__backdrop" id="budgetBackdrop"></div>
+      <div class="side-panel__sheet">
+        <div class="side-panel__header">
+          <h2 class="side-panel__title">Set Monthly Budget</h2>
+          <button class="side-panel__close" id="budgetPanelClose" aria-label="Close">✕</button>
+        </div>
+        <div class="panel-body">
+          <div class="form-group">
+            <label for="budgetInput" class="form-label">Monthly budget (₦)</label>
+            <div class="amount-wrap">
+              <span class="currency-prefix">₦</span>
+              <input type="number" id="budgetInput" class="form-input amount-input" placeholder="Enter your budget" step="100" min="0">
+            </div>
+          </div>
+          <button class="btn btn--primary" id="saveBudgetBtn">Save Budget</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="side-panel" id="goalPanel">
+      <div class="side-panel__backdrop" id="goalBackdrop"></div>
+      <div class="side-panel__sheet">
+        <div class="side-panel__header">
+          <h2 class="side-panel__title" id="goalPanelTitle">Create Savings Goal</h2>
+          <button class="side-panel__close" id="goalPanelClose" aria-label="Close">✕</button>
+        </div>
+        <div class="panel-body">
+          <div class="form-group">
+            <label for="goalName" class="form-label">Goal name</label>
+            <input type="text" id="goalName" class="form-input" placeholder="e.g., New Laptop">
+          </div>
+          <div class="form-group">
+            <label for="goalTarget" class="form-label">Target amount (₦)</label>
+            <div class="amount-wrap">
+              <span class="currency-prefix">₦</span>
+              <input type="number" id="goalTarget" class="form-input amount-input" placeholder="0.00" step="100" min="0">
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="goalDate" class="form-label">Target date (optional)</label>
+            <input type="date" id="goalDate" class="form-input">
+          </div>
+          <button class="btn btn--primary" id="saveGoalBtn">Save Goal</button>
+          <button class="btn btn--danger hidden" id="deleteGoalBtn">Delete Goal</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
