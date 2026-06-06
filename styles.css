@@ -164,7 +164,7 @@ body {
 
 .app {
   position: relative;
-  z-index: 1;
+  z-index: 60;
   max-width: 960px;
   margin: 0 auto;
   padding: 1.25rem 1.5rem 4rem;
@@ -330,7 +330,7 @@ body {
 
 .card__label { font-size: 0.78rem; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.06em; }
 
-.card__value { font-family: var(--font-heading); font-weight: 700; font-size: 1.5rem; color: var(--text); font-variant-numeric: tabular-nums; line-height: 1.2; }
+.card__value { font-family: var(--font-heading); font-weight: 700; font-size: 1.5rem; color: var(--text); font-variant-numeric: tabular-nums; line-height: 1.2; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 .card__value--sm { font-size: 1.1rem; }
 
@@ -845,6 +845,8 @@ body {
   transition: border-color 0.2s, box-shadow 0.2s, background var(--transition);
   -webkit-appearance: none;
   appearance: none;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .form-input::placeholder { color: var(--text-muted); opacity: 0.6; }
@@ -1096,7 +1098,7 @@ body {
   bottom: 0;
   left: 0;
   right: 0;
-  z-index: 50;
+  z-index: 100;
   text-align: center;
   padding: 0.75rem 1.5rem;
   border-top: 1px solid var(--border);

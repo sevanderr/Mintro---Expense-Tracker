@@ -77,7 +77,7 @@ function cacheDom() {
     'contentArea', 'viewContainer', 'emptyState',
     'expensePanel', 'panelBackdrop', 'panelSheet', 'panelClose', 'expenseForm',
     'expenseName', 'expenseAmount', 'expenseCategory', 'expenseDate', 'addBtn', 'formError', 'dateFieldGroup',
-    'budgetPanel', 'budgetBackdrop', 'budgetPanelClose', 'budgetInput', 'saveBudgetBtn',
+    'budgetPanel', 'budgetBackdrop', 'budgetPanelClose', 'budgetInput', 'saveBudgetBtn', 'clearBudgetBtn',
     'goalPanel', 'goalBackdrop', 'goalPanelClose', 'goalPanelTitle',
     'goalName', 'goalTarget', 'goalDate', 'saveGoalBtn', 'deleteGoalBtn',
     'fab', 'cardTotal', 'cardBudget', 'cardStatus', 'cardGoal',
@@ -885,7 +885,12 @@ function setupEventListeners() {
 
   // Budget panel
   dom.dashEditBudget.addEventListener('click', () => {
-    if (state.budget) dom.budgetInput.value = state.budget.amount;
+    if (state.budget) {
+      dom.budgetInput.value = state.budget.amount;
+      dom.clearBudgetBtn.classList.remove('hidden');
+    } else {
+      dom.clearBudgetBtn.classList.add('hidden');
+    }
     openPanel('budget');
   });
   dom.saveBudgetBtn.addEventListener('click', () => {
@@ -896,6 +901,10 @@ function setupEventListeners() {
   });
   dom.budgetInput.addEventListener('keydown', e => {
     if (e.key === 'Enter') dom.saveBudgetBtn.click();
+  });
+  dom.clearBudgetBtn.addEventListener('click', () => {
+    clearBudget();
+    closePanels();
   });
 
   // Goal panel
