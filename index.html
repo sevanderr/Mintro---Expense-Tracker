@@ -2,7 +2,7 @@
 <html lang="en" data-theme="light">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>Mintro — Spend Smarter</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -20,14 +20,14 @@
     <div class="header__inner">
       <div class="header__brand">
         <h1 class="logo">Mintro</h1>
-        <span class="tagline">Spend smarter. Budget better. Stay in control.</span>
+        <span class="tagline desktop-only">Spend smarter. Budget better. Stay in control.</span>
       </div>
       <div class="header__actions">
-        <button class="header-btn" id="exportBtn" aria-label="Export CSV" title="Export CSV">⬇</button>
+        <button class="header-btn desktop-only" id="exportBtn" aria-label="Export CSV" title="Export CSV">⬇</button>
         <button class="header-btn theme-toggle" id="themeToggle" aria-label="Toggle theme">🌙</button>
-        <div class="header__profile">
+        <div class="header__profile" id="profileTrigger">
           <div class="avatar" id="userAvatar">A</div>
-          <span class="username" id="userNameDisplay">Alexander</span>
+          <span class="username desktop-only" id="userNameDisplay">Alexander</span>
         </div>
       </div>
     </div>
@@ -38,7 +38,29 @@
       <p class="welcome__text" id="welcomeText">Welcome back, Alexander. Track every penny, it counts!</p>
     </section>
 
-    <section class="dashboard" id="dashboard">
+    <!-- Mobile Summary -->
+    <div class="mobile-summary mobile-only" id="mobileSummary">
+      <div class="summary-primary">
+        <div class="summary-primary__label">Total Spent This Month</div>
+        <div class="summary-primary__amount" id="summaryTotal">₦0.00</div>
+        <div class="summary-primary__status">
+          <svg class="mini-ring" width="48" height="48" viewBox="0 0 48 48">
+            <circle class="mini-ring__bg" cx="24" cy="24" r="20" fill="none"/>
+            <circle class="mini-ring__fill" id="summaryRingFill" cx="24" cy="24" r="20" fill="none" stroke-dasharray="125.66" stroke-dashoffset="0"/>
+          </svg>
+          <button class="status-pill" id="summaryStatusPill">Set Budget</button>
+        </div>
+      </div>
+      <div class="stat-chips" id="statChips">
+        <button class="stat-chip" data-action="budget">💰 Budget Remaining: <strong>—</strong></button>
+        <button class="stat-chip" data-action="goal">🎯 Goal Progress: <strong>Not set</strong></button>
+        <button class="stat-chip" data-action="daily">📅 Today's Spending: <strong>₦0</strong></button>
+      </div>
+      <button class="summary-manage-btn" id="summaryManageBtn">⚙️ Manage</button>
+    </div>
+
+    <!-- Desktop Dashboard -->
+    <section class="dashboard desktop-only" id="dashboard">
       <div class="card" id="cardTotal">
         <div class="card__icon-wrap"><span class="card__icon">💰</span></div>
         <div class="card__body">
@@ -82,11 +104,12 @@
       </div>
     </section>
 
-    <section class="toolbar">
+    <!-- Desktop Toolbar -->
+    <section class="toolbar desktop-only">
       <div class="view-switcher">
-        <button class="pill pill--active" data-view="daily">📆 Daily</button>
-        <button class="pill" data-view="monthly">🗓️ Monthly</button>
-        <button class="pill" data-view="yearly">📊 Yearly</button>
+        <button class="pill pill--active" data-view="daily">Daily</button>
+        <button class="pill" data-view="monthly">Monthly</button>
+        <button class="pill" data-view="yearly">Yearly</button>
       </div>
       <div class="view-nav" id="viewNav">
         <button class="nav-btn" id="navPrev">‹</button>
@@ -95,7 +118,22 @@
       </div>
     </section>
 
-    <section class="search-section">
+    <!-- Mobile Date Strip -->
+    <div class="date-strip mobile-only" id="dateStrip"></div>
+
+    <!-- Mobile Search -->
+    <div class="mobile-search mobile-only" id="mobileSearchSection">
+      <div class="mobile-search__bar">
+        <input type="search" id="mobileSearchInput" class="mobile-search__input" placeholder="Search expenses..." autocomplete="off">
+        <button class="mobile-search__toggle" id="mobileSearchBtn" aria-label="Toggle search">🔍</button>
+      </div>
+      <select class="mobile-filter-select" id="mobileFilterSelect">
+        <option value="all">All categories</option>
+      </select>
+    </div>
+
+    <!-- Desktop Search -->
+    <section class="search-section desktop-only">
       <div class="search-wrap">
         <span class="search-icon">🔍</span>
         <input type="search" id="searchInput" class="search-input" placeholder="Search expenses..." autocomplete="off">
@@ -111,16 +149,22 @@
       <div id="viewContainer"></div>
     </section>
 
+    <footer class="footer desktop-only">
+      <p>&copy; 2026 Mintro &mdash; Seven Alexander</p>
+    </footer>
+
     <button class="fab" id="fab" aria-label="Add expense">+</button>
 
+    <!-- Expense Panel -->
     <div class="side-panel" id="expensePanel">
       <div class="side-panel__backdrop" id="panelBackdrop"></div>
-      <div class="side-panel__sheet" id="panelSheet">
+      <div class="side-panel__sheet">
         <div class="side-panel__header">
           <h2 class="side-panel__title">New Expense</h2>
           <button class="side-panel__close" id="panelClose" aria-label="Close">✕</button>
         </div>
         <form id="expenseForm" class="expense-form" novalidate>
+          <div class="category-chips" id="categoryChips"></div>
           <div class="form-group">
             <label for="expenseName" class="form-label">Expense name</label>
             <input type="text" id="expenseName" class="form-input" placeholder="What did you spend on?" autocomplete="off">
@@ -132,7 +176,7 @@
               <input type="number" id="expenseAmount" class="form-input amount-input" placeholder="0.00" step="0.01" min="0">
             </div>
           </div>
-          <div class="form-group">
+          <div class="form-group desktop-only">
             <label for="expenseCategory" class="form-label">Category</label>
             <select id="expenseCategory" class="form-input form-select"></select>
           </div>
@@ -146,6 +190,7 @@
       </div>
     </div>
 
+    <!-- Budget Panel -->
     <div class="side-panel" id="budgetPanel">
       <div class="side-panel__backdrop" id="budgetBackdrop"></div>
       <div class="side-panel__sheet">
@@ -167,6 +212,7 @@
       </div>
     </div>
 
+    <!-- Goal Panel -->
     <div class="side-panel" id="goalPanel">
       <div class="side-panel__backdrop" id="goalBackdrop"></div>
       <div class="side-panel__sheet">
@@ -195,11 +241,52 @@
         </div>
       </div>
     </div>
+
+    <!-- More Panel -->
+    <div class="side-panel" id="morePanel">
+      <div class="side-panel__backdrop" id="moreBackdrop"></div>
+      <div class="side-panel__sheet">
+        <div class="side-panel__header">
+          <h2 class="side-panel__title">More</h2>
+          <button class="side-panel__close" id="morePanelClose" aria-label="Close">✕</button>
+        </div>
+        <div class="panel-body more-menu">
+          <div class="more-menu__profile">
+            <div class="avatar avatar--lg" id="moreAvatar">A</div>
+            <span class="more-menu__name" id="moreUserName">Alexander</span>
+          </div>
+          <button class="btn btn--primary more-menu__btn" id="moreExportBtn">⬇ Export CSV</button>
+          <button class="btn more-menu__btn" id="moreBudgetBtn">📊 Set Budget</button>
+          <button class="btn more-menu__btn" id="moreGoalBtn">🎯 Set Goal</button>
+          <button class="btn more-menu__btn" id="moreThemeBtn">🌙 Toggle Theme</button>
+        </div>
+      </div>
+    </div>
   </div>
 
-    <footer class="footer">
-      <p>© 2026 Mintro — Seven Alexander</p>
-    </footer>
+  <!-- Bottom Navigation -->
+  <nav class="bottom-nav mobile-only" id="bottomNav">
+    <button class="bottom-nav__item bottom-nav__item--active" data-tab="summary">
+      <span class="bottom-nav__icon">🏠</span>
+      <span class="bottom-nav__label">Summary</span>
+    </button>
+    <button class="bottom-nav__item" data-tab="daily">
+      <span class="bottom-nav__icon">📅</span>
+      <span class="bottom-nav__label">Daily</span>
+    </button>
+    <button class="bottom-nav__item" data-tab="monthly">
+      <span class="bottom-nav__icon">🗓️</span>
+      <span class="bottom-nav__label">Monthly</span>
+    </button>
+    <button class="bottom-nav__item" data-tab="yearly">
+      <span class="bottom-nav__icon">📊</span>
+      <span class="bottom-nav__label">Yearly</span>
+    </button>
+    <button class="bottom-nav__item" data-tab="more">
+      <span class="bottom-nav__icon">⚙️</span>
+      <span class="bottom-nav__label">More</span>
+    </button>
+  </nav>
 
   <script src="app.js"></script>
 </body>

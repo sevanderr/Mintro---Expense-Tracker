@@ -48,6 +48,7 @@ const state = {
   goalSurplus: {},
   userName: 'Alexander',
   currentView: 'daily',
+  currentTab: 'summary',
   selectedDate: new Date(),
   currentYear: new Date().getFullYear(),
   currentFilter: 'all',
@@ -83,9 +84,17 @@ function cacheDom() {
     'fab', 'cardTotal', 'cardBudget', 'cardStatus', 'cardGoal',
     'userAvatar', 'userNameDisplay', 'welcomeText',
     'dashEditBudget', 'dashGoalAction',
+    'mobileSummary', 'summaryTotal', 'summaryRingFill', 'summaryStatusPill',
+    'statChips', 'summaryManageBtn', 'dateStrip',
+    'mobileSearchSection', 'mobileSearchInput', 'mobileSearchBtn', 'mobileFilterSelect',
+    'morePanel', 'moreBackdrop', 'morePanelClose',
+    'moreAvatar', 'moreUserName', 'moreExportBtn', 'moreBudgetBtn', 'moreGoalBtn', 'moreThemeBtn',
+    'categoryChips', 'profileTrigger',
   ];
   ids.forEach(id => { dom[id] = $(`#${id}`); });
   dom.viewPills = $$('.pill');
+  dom.bottomNavItems = $$('.bottom-nav__item');
+  dom.filterSelect = dom.mobileFilterSelect;
 }
 
 /* ─── Helpers ────────────────────────────────────── */
@@ -203,7 +212,9 @@ function loadState() {
 function applyTheme(theme) {
   state.theme = theme;
   document.documentElement.setAttribute('data-theme', theme);
-  dom.themeToggle.textContent = theme === 'dark' ? '☀️' : '🌙';
+  const icon = theme === 'dark' ? '☀️' : '🌙';
+  dom.themeToggle.textContent = icon;
+  if (dom.moreThemeBtn) dom.moreThemeBtn.textContent = `${icon} Toggle Theme`;
   saveState();
 }
 
@@ -219,11 +230,18 @@ function toggleTheme() {
 function openPanel(name) {
   closePanels();
   const el = dom[name + 'Panel'];
-  if (el) el.classList.add('side-panel--open');
+  if (!el) return;
+  el.classList.add('side-panel--open');
+  if (window.innerWidth < 768 && name !== 'more') {
+    el.classList.add('side-panel--fullscreen');
+  }
 }
 
 function closePanels() {
-  $$('.side-panel').forEach(p => p.classList.remove('side-panel--open'));
+  $$('.side-panel').forEach(p => {
+    p.classList.remove('side-panel--open');
+    p.classList.remove('side-panel--fullscreen');
+  });
   dom.fab.classList.remove('fab--open');
 }
 
@@ -546,6 +564,288 @@ function renderExpenseListHTML(expenses) {
   return html;
 }
 
+/* ─── Render: Category Chips (Mobile) ────────────── */
+
+function renderCategoryChips() {
+  dom.categoryChips.innerHTML = '';
+  CATEGORIES.forEach(cat => {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = `category-chip${cat.id === DEFAULT_CATEGORY ? ' category-chip--active' : ''}`;
+    btn.dataset.category = cat.id;
+    btn.innerHTML = `<span class="category-chip__emoji">${cat.emoji}</span>${cat.label}`;
+    btn.addEventListener('click', () => {
+      dom.categoryChips.querySelectorAll('.category-chip').forEach(c => c.classList.remove('category-chip--active'));
+      btn.classList.add('category-chip--active');
+      dom.expenseCategory.value = cat.id;
+    });
+    dom.categoryChips.appendChild(btn);
+  });
+}
+
+/* ─── Render: Date Strip (Mobile Daily) ─────────── */
+
+function renderDateStrip() {
+  const today = new Date();
+  const todayStr = toDateStr(today);
+  const selectedStr = toDateStr(state.selectedDate);
+
+  let html = '';
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date(today);
+    d.setDate(today.getDate() - i);
+    const ds = toDateStr(d);
+    const dayExp = getDayExpenses(ds);
+    const isActive = ds === selectedStr;
+    const isToday = ds === todayStr;
+    const dayName = WEEKDAYS[d.getDay()].slice(0, 2);
+
+    html += `<div class="date-strip__day${isActive ? ' date-strip__day--active' : ''}${isToday && !isActive ? ' date-strip__day--today' : ''}" data-date="${ds}">
+      <span class="date-strip__day-name">${dayName}</span>
+      <span class="date-strip__day-number">${d.getDate()}</span>
+      ${dayExp.length > 0 ? `<span class="date-strip__day-dot date-strip__day-dot--expenses"></span>` : `<span style="height:4px"></span>`}
+    </div>`;
+  }
+  dom.dateStrip.innerHTML = html;
+
+  setTimeout(() => {
+    const active = dom.dateStrip.querySelector('.date-strip__day--active');
+    if (active) active.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+  }, 50);
+}
+
+/* ─── Render: Mobile Monthly (Vertical List) ────── */
+
+function renderMobileMonthly() {
+  const year = state.selectedDate.getFullYear();
+  const month = state.selectedDate.getMonth();
+  const today = new Date();
+  const todayStr = toDateStr(today);
+  const daysInMonth = getDaysInMonth(year, month);
+  const selectedStr = toDateStr(state.selectedDate);
+
+  let html = `<div class="monthly-nav">
+    <button class="monthly-nav__btn" id="mobileMonthPrev" data-action="prev">‹</button>
+    <span class="monthly-nav__title">${MONTHS_SHORT[month]} ${year}</span>
+    <button class="monthly-nav__btn" id="mobileMonthNext" data-action="next">›</button>
+  </div>`;
+
+  html += '<div class="calendar-list">';
+  for (let d = 1; d <= daysInMonth; d++) {
+    const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+    const dayExp = getDayExpenses(dateStr);
+    const total = getAllTotal(dayExp);
+    const isToday = dateStr === todayStr;
+    const isSelected = dateStr === selectedStr;
+    const topCat = dayExp.length > 0 ? getCategory(dayExp[0].category) : null;
+
+    let level = '';
+    if (dayExp.length > 0) {
+      const dailyBudget = state.budget ? state.budget.amount / daysInMonth : 0;
+      if (dailyBudget > 0) {
+        if (total > dailyBudget * 1.2) level = 'high';
+        else if (total > dailyBudget * 0.8) level = 'med';
+        else level = 'low';
+      } else {
+        level = 'low';
+      }
+    }
+
+    html += `<div class="calendar-list__day${isToday ? ' calendar-list__day--today' : ''}${isSelected ? ' calendar-list__day--selected' : ''}" data-date="${dateStr}">
+      <span class="calendar-list__day-number">${d}</span>
+      ${level ? `<span class="calendar-list__day-dot" style="background:var(--${level === 'high' ? 'danger' : level === 'med' ? 'warning' : 'success'})"></span>` : `<span style="width:8px;flex-shrink:0"></span>`}
+      <div class="calendar-list__day-info">
+        <span class="calendar-list__day-total">${dayExp.length > 0 ? fmtCurr(total) : '—'}</span>
+        ${topCat ? `<div class="calendar-list__day-category">${topCat.emoji} ${topCat.label}</div>` : ''}
+      </div>
+    </div>`;
+  }
+  html += '</div>';
+
+  const selDay = getDayExpenses(selectedStr);
+  const selTotal = getAllTotal(selDay);
+  const displayDate = selectedStr.split('-').reverse().join('/');
+  html += `<div class="calendar-summary">
+    Spent <strong>${fmtCurr(selTotal)}</strong> on ${displayDate}
+    ${selDay.length > 0 ? ` (${selDay.length} expense${selDay.length > 1 ? 's' : ''})` : ''}
+  </div>`;
+
+  return html;
+}
+
+/* ─── Render: Mobile Yearly (Vertical List) ─────── */
+
+function renderMobileYearly() {
+  const year = state.currentYear;
+  const today = new Date();
+  const currentMonth = today.getMonth();
+  const currentYear = today.getFullYear();
+
+  let monthlyTotals = [];
+  for (let m = 0; m < 12; m++) {
+    monthlyTotals.push(getMonthlyTotal(year, m));
+  }
+  const maxTotal = Math.max(...monthlyTotals, 1);
+
+  let html = `<div class="monthly-nav">
+    <button class="monthly-nav__btn" id="mobileYearPrev" data-action="prev">‹</button>
+    <span class="monthly-nav__title">${year}</span>
+    <button class="monthly-nav__btn" id="mobileYearNext" data-action="next">›</button>
+  </div>`;
+
+  html += '<div class="yearly-list">';
+  for (let m = 0; m < 12; m++) {
+    const total = monthlyTotals[m];
+    const pct = maxTotal > 0 ? (total / maxTotal) * 100 : 0;
+    const isCurrent = m === currentMonth && year === currentYear;
+
+    let overBudget = false;
+    if (state.budget) {
+      const monthExp = getMonthExpenses(year, m);
+      const monthTotal = getAllTotal(monthExp);
+      overBudget = monthTotal > state.budget.amount;
+    }
+
+    html += `<div class="yearly-list__month${isCurrent ? ' yearly-list__month--current' : ''}" data-year="${year}" data-month="${m}">
+      <div class="yearly-list__month-header">
+        <span class="yearly-list__month-name">${MONTHS_SHORT[m]}${overBudget ? ' ⚠️' : ''}</span>
+        <span class="yearly-list__month-amount">${fmtCurr(total)}</span>
+      </div>
+      <div class="yearly-list__bar"><div class="yearly-list__bar-fill" style="width:${pct}%"></div></div>
+    </div>`;
+  }
+  html += '</div>';
+  return html;
+}
+
+/* ─── Render: Mobile Summary ────────────────────── */
+
+function renderMobileSummary() {
+  const total = getCurrentMonthTotal();
+
+  animateValue(dom.summaryTotal, total);
+
+  // Budget ring
+  if (state.budget) {
+    const remaining = state.budget.amount - total;
+    const pct = Math.min((total / state.budget.amount) * 100, 100);
+    const r = 20;
+    const circ = 2 * Math.PI * r;
+    const offset = circ * (1 - pct / 100);
+    dom.summaryRingFill.style.strokeDasharray = circ;
+    dom.summaryRingFill.style.strokeDashoffset = offset;
+
+    let ringColor = 'var(--success)';
+    let pillClass = 'status-pill--safe';
+    let pillText = remaining >= 0 ? `Surplus: ${fmtCurr(Math.max(0, remaining))}` : `Overspent by ${fmtCurr(Math.abs(remaining))}`;
+    if (pct >= 100) { ringColor = 'var(--danger)'; pillClass = 'status-pill--danger'; }
+    else if (pct >= 70) { ringColor = 'var(--warning)'; pillClass = 'status-pill--warn'; }
+    dom.summaryRingFill.style.stroke = ringColor;
+    dom.summaryStatusPill.textContent = pillText;
+    dom.summaryStatusPill.className = `status-pill ${pillClass}`;
+    dom.summaryStatusPill.onclick = () => {
+      if (dom.budgetInput) {
+        dom.budgetInput.value = state.budget.amount;
+        dom.clearBudgetBtn.classList.remove('hidden');
+        openPanel('budget');
+      }
+    };
+  } else {
+    dom.summaryRingFill.style.strokeDashoffset = 125.66;
+    dom.summaryRingFill.style.stroke = 'var(--success)';
+    dom.summaryStatusPill.textContent = 'Set Budget';
+    dom.summaryStatusPill.className = 'status-pill';
+    dom.summaryStatusPill.onclick = () => {
+      dom.clearBudgetBtn.classList.add('hidden');
+      dom.budgetInput.value = '';
+      openPanel('budget');
+    };
+  }
+
+  // Stat chips
+  const chips = dom.statChips.querySelectorAll('.stat-chip');
+  if (chips.length >= 3) {
+    const budgetRemaining = state.budget ? state.budget.amount - total : 0;
+    chips[0].innerHTML = `💰 Budget Remaining: <strong>${state.budget ? fmtCurr(Math.max(0, budgetRemaining)) : '—'}</strong>`;
+    chips[0].onclick = () => {
+      if (state.budget) {
+        dom.budgetInput.value = state.budget.amount;
+        dom.clearBudgetBtn.classList.remove('hidden');
+      } else {
+        dom.budgetInput.value = '';
+        dom.clearBudgetBtn.classList.add('hidden');
+      }
+      openPanel('budget');
+    };
+
+    const goal = state.goals[0];
+    chips[1].innerHTML = `🎯 Goal Progress: <strong>${goal ? `${Math.round((goal.savedAmount / goal.targetAmount) * 100)}%` : 'Not set'}</strong>`;
+    chips[1].onclick = () => {
+      if (state.goals.length > 0) {
+        const g = state.goals[0];
+        dom.goalName.value = g.name;
+        dom.goalTarget.value = g.targetAmount;
+        dom.goalDate.value = g.targetDate || '';
+        dom.goalPanelTitle.textContent = 'Edit Savings Goal';
+        dom.deleteGoalBtn.classList.remove('hidden');
+        dom.saveGoalBtn.textContent = 'Save Changes';
+      } else {
+        dom.goalName.value = '';
+        dom.goalTarget.value = '';
+        dom.goalDate.value = '';
+        dom.goalPanelTitle.textContent = 'Create Savings Goal';
+        dom.deleteGoalBtn.classList.add('hidden');
+        dom.saveGoalBtn.textContent = 'Save Goal';
+      }
+      openPanel('goal');
+    };
+
+    const todayStr = toDateStr(new Date());
+    const todayExp = getDayExpenses(todayStr);
+    const todayTotal = getAllTotal(todayExp);
+    chips[2].innerHTML = `📅 Today's Spending: <strong>${fmtCurr(todayTotal)}</strong>`;
+    chips[2].onclick = () => {
+      state.selectedDate = new Date();
+      setTab('daily');
+    };
+  }
+}
+
+/* ─── Tab Switching (Bottom Nav) ────────────────── */
+
+function setTab(tab) {
+  state.currentTab = tab;
+  dom.bottomNavItems.forEach(item => {
+    item.classList.toggle('bottom-nav__item--active', item.dataset.tab === tab);
+  });
+
+  if (tab === 'more') {
+    openPanel('more');
+    return;
+  }
+
+  if (tab === 'summary') {
+    state.currentView = 'summary';
+    dom.mobileSummary.classList.remove('hidden');
+    dom.dateStrip.classList.add('hidden');
+    dom.mobileSearchSection.classList.add('hidden');
+    // Activate daily pill on desktop pill switcher if needed
+    $$('.pill').forEach(p => p.classList.toggle('pill--active', p.dataset.view === 'daily'));
+  } else {
+    dom.mobileSummary.classList.add('hidden');
+    if (tab === 'daily') {
+      dom.dateStrip.classList.remove('hidden');
+      dom.mobileSearchSection.classList.remove('hidden');
+    } else {
+      dom.dateStrip.classList.add('hidden');
+      dom.mobileSearchSection.classList.remove('hidden');
+    }
+    state.currentView = tab;
+    $$('.pill').forEach(p => p.classList.toggle('pill--active', p.dataset.view === tab));
+  }
+  renderAll();
+}
+
 /* ─── Render: Dashboard ──────────────────────────── */
 
 function renderDashboard() {
@@ -627,8 +927,10 @@ function renderDashboard() {
 function updateProfile() {
   const initial = state.userName.charAt(0).toUpperCase();
   dom.userAvatar.textContent = initial;
-  dom.userNameDisplay.textContent = state.userName;
-  dom.welcomeText.textContent = `Welcome back, ${state.userName}. Track every penny, it counts!`;
+  if (dom.moreAvatar) dom.moreAvatar.textContent = initial;
+  if (dom.moreUserName) dom.moreUserName.textContent = state.userName;
+  if (dom.userNameDisplay) dom.userNameDisplay.textContent = state.userName;
+  dom.welcomeText.innerHTML = `Welcome back, <strong>${state.userName}</strong>. Track every penny, it counts!`;
   document.title = `Mintro — ${state.userName}'s Tracker`;
 }
 
@@ -640,10 +942,25 @@ function renderAll() {
 
   const filtered = getFilteredExpenses();
 
+  // Render mobile summary when on summary tab
+  if (state.currentView === 'summary') {
+    renderMobileSummary();
+    dom.viewContainer.innerHTML = '';
+    dom.emptyState.classList.add('hidden');
+    renderFilters();
+    return;
+  }
+
+  // Mobile-specific renders for non-desktop widths
+  const isMobile = window.innerWidth < 768;
+
   switch (state.currentView) {
-    case 'monthly':
-      content = renderMonthly();
-      // Show expense list for selected day
+    case 'monthly': {
+      if (isMobile) {
+        content = renderMobileMonthly();
+      } else {
+        content = renderMonthly();
+      }
       const selStr = toDateStr(state.selectedDate);
       const dayExp = getDayExpenses(selStr);
       if (dayExp.length > 0) {
@@ -652,6 +969,7 @@ function renderAll() {
         showEmpty = true;
       }
       break;
+    }
 
     case 'daily': {
       const ds = toDateStr(state.selectedDate);
@@ -661,10 +979,15 @@ function renderAll() {
       break;
     }
 
-    case 'yearly':
-      content = renderYearly();
+    case 'yearly': {
+      if (isMobile) {
+        content = renderMobileYearly();
+      } else {
+        content = renderYearly();
+      }
       if (state.expenses.length === 0) showEmpty = true;
       break;
+    }
   }
 
   dom.viewContainer.innerHTML = content;
@@ -677,9 +1000,20 @@ function renderAll() {
     });
   });
 
+  // Wire up mobile monthly/yearly nav buttons
+  const monthPrev = dom.viewContainer.querySelector('#mobileMonthPrev');
+  const monthNext = dom.viewContainer.querySelector('#mobileMonthNext');
+  if (monthPrev) monthPrev.addEventListener('click', () => { state.selectedDate.setMonth(state.selectedDate.getMonth() - 1); renderAll(); });
+  if (monthNext) monthNext.addEventListener('click', () => { state.selectedDate.setMonth(state.selectedDate.getMonth() + 1); renderAll(); });
+  const yearPrev = dom.viewContainer.querySelector('#mobileYearPrev');
+  const yearNext = dom.viewContainer.querySelector('#mobileYearNext');
+  if (yearPrev) yearPrev.addEventListener('click', () => { state.currentYear--; renderAll(); });
+  if (yearNext) yearNext.addEventListener('click', () => { state.currentYear++; renderAll(); });
+
   renderDashboard();
   renderFilters();
   updateDateFieldVisibility();
+  renderDateStrip();
 }
 
 /* ─── Filters ────────────────────────────────────── */
@@ -828,22 +1162,27 @@ function setupEventListeners() {
   dom.expenseName.addEventListener('input', () => { dom.formError.textContent = ''; });
   dom.expenseAmount.addEventListener('input', () => { dom.formError.textContent = ''; });
 
-  // View switcher
+  // View switcher (desktop pills)
   dom.viewPills.forEach(pill => {
-    pill.addEventListener('click', () => setView(pill.dataset.view));
+    pill.addEventListener('click', () => {
+      setView(pill.dataset.view);
+      if (window.innerWidth < 768) {
+        setTab(pill.dataset.view);
+      }
+    });
   });
 
-  // Navigation
+  // Navigation (desktop arrows)
   dom.navPrev.addEventListener('click', navPrev);
   dom.navNext.addEventListener('click', navNext);
 
-  // Search
+  // Desktop search
   dom.searchInput.addEventListener('input', () => {
     state.searchQuery = dom.searchInput.value;
     renderAll();
   });
 
-  // Filter tabs
+  // Desktop filter tabs
   dom.filterTabs.addEventListener('click', e => {
     const tab = e.target.closest('.filter-tab');
     if (!tab) return;
@@ -853,12 +1192,95 @@ function setupEventListeners() {
     renderAll();
   });
 
-  // View container (event delegation for calendar days, delete buttons, yearly months)
+  // ── Bottom Nav ──────────────────────────────────
+  dom.bottomNavItems.forEach(item => {
+    item.addEventListener('click', () => setTab(item.dataset.tab));
+  });
+
+  // ── Mobile Search Toggle ────────────────────────
+  dom.mobileSearchBtn.addEventListener('click', () => {
+    const wrap = dom.mobileSearchInput;
+    wrap.style.display = wrap.style.display === 'none' ? '' : 'none';
+    if (wrap.style.display !== 'none') wrap.focus();
+  });
+
+  // ── Mobile Search Input ─────────────────────────
+  dom.mobileSearchInput.addEventListener('input', () => {
+    state.searchQuery = dom.mobileSearchInput.value;
+    renderAll();
+  });
+
+  // ── Mobile Filter Select ────────────────────────
+  dom.mobileFilterSelect.addEventListener('change', () => {
+    state.currentFilter = dom.mobileFilterSelect.value;
+    renderAll();
+  });
+
+  // ── Profile Trigger (open More on mobile) ───────
+  dom.profileTrigger.addEventListener('click', () => {
+    if (window.innerWidth < 768) {
+      setTab('more');
+    }
+  });
+
+  // ── More Panel Buttons ──────────────────────────
+  dom.moreExportBtn.addEventListener('click', () => {
+    closePanels();
+    exportCSV();
+  });
+
+  dom.moreBudgetBtn.addEventListener('click', () => {
+    closePanels();
+    if (state.budget) {
+      dom.budgetInput.value = state.budget.amount;
+      dom.clearBudgetBtn.classList.remove('hidden');
+    } else {
+      dom.budgetInput.value = '';
+      dom.clearBudgetBtn.classList.add('hidden');
+    }
+    openPanel('budget');
+  });
+
+  dom.moreGoalBtn.addEventListener('click', () => {
+    closePanels();
+    if (state.goals.length > 0) {
+      const g = state.goals[0];
+      dom.goalName.value = g.name;
+      dom.goalTarget.value = g.targetAmount;
+      dom.goalDate.value = g.targetDate || '';
+      dom.goalPanelTitle.textContent = 'Edit Savings Goal';
+      dom.deleteGoalBtn.classList.remove('hidden');
+      dom.saveGoalBtn.textContent = 'Save Changes';
+    } else {
+      dom.goalName.value = '';
+      dom.goalTarget.value = '';
+      dom.goalDate.value = '';
+      dom.goalPanelTitle.textContent = 'Create Savings Goal';
+      dom.deleteGoalBtn.classList.add('hidden');
+      dom.saveGoalBtn.textContent = 'Save Goal';
+    }
+    openPanel('goal');
+  });
+
+  dom.moreThemeBtn.addEventListener('click', () => {
+    closePanels();
+    toggleTheme();
+  });
+
+  // ── View container (event delegation) ───────────
   dom.viewContainer.addEventListener('click', e => {
-    // Calendar day click
+    // Calendar day click (desktop grid)
     const dayEl = e.target.closest('.calendar-day');
     if (dayEl && dayEl.dataset.date) {
       state.selectedDate = new Date(dayEl.dataset.date + 'T12:00:00');
+      renderAll();
+      return;
+    }
+
+    // Calendar list day click (mobile vertical list)
+    const listDayEl = e.target.closest('.calendar-list__day');
+    if (listDayEl && listDayEl.dataset.date) {
+      state.selectedDate = new Date(listDayEl.dataset.date + 'T12:00:00');
       renderAll();
       return;
     }
@@ -870,7 +1292,7 @@ function setupEventListeners() {
       return;
     }
 
-    // Yearly month click
+    // Yearly month click (desktop grid)
     const monthEl = e.target.closest('.yearly-month');
     if (monthEl) {
       const y = parseInt(monthEl.dataset.year);
@@ -878,10 +1300,82 @@ function setupEventListeners() {
       state.selectedDate = new Date(y, m, 1);
       state.currentView = 'monthly';
       $$('.pill').forEach(p => p.classList.toggle('pill--active', p.dataset.view === 'monthly'));
-      renderAll();
+      if (window.innerWidth < 768) setTab('monthly');
+      else renderAll();
+      return;
+    }
+
+    // Yearly month click (mobile list)
+    const listMonthEl = e.target.closest('.yearly-list__month');
+    if (listMonthEl) {
+      const y = parseInt(listMonthEl.dataset.year);
+      const m = parseInt(listMonthEl.dataset.month);
+      state.selectedDate = new Date(y, m, 1);
+      setTab('monthly');
       return;
     }
   });
+
+  // ── Date Strip click ────────────────────────────
+  dom.dateStrip.addEventListener('click', e => {
+    const dayEl = e.target.closest('.date-strip__day');
+    if (!dayEl || !dayEl.dataset.date) return;
+    state.selectedDate = new Date(dayEl.dataset.date + 'T12:00:00');
+    renderAll();
+  });
+
+  // ── Daily header title click (native date picker) ─
+  dom.viewContainer.addEventListener('click', e => {
+    const titleEl = e.target.closest('.daily-header__title');
+    if (titleEl && window.innerWidth < 768) {
+      const input = document.createElement('input');
+      input.type = 'date';
+      input.value = toDateStr(state.selectedDate);
+      input.style.position = 'fixed';
+      input.style.opacity = '0';
+      input.style.pointerEvents = 'none';
+      document.body.appendChild(input);
+      input.addEventListener('input', () => {
+        if (input.value) {
+          state.selectedDate = new Date(input.value + 'T12:00:00');
+          renderAll();
+        }
+        document.body.removeChild(input);
+      });
+      input.addEventListener('blur', () => {
+        setTimeout(() => { if (document.body.contains(input)) document.body.removeChild(input); }, 300);
+      });
+      input.showPicker();
+    }
+  });
+
+  // ── Summary Manage Button ────────────────────────
+  dom.summaryManageBtn.addEventListener('click', () => setTab('more'));
+
+  // ── Window resize ───────────────────────────────
+  window.addEventListener('resize', () => {
+    if (window.innerWidth >= 768 && state.currentView === 'summary') {
+      setTab('daily');
+    }
+  });
+
+  // ── Swipe for daily (desktop) ───────────────────
+  let touchStartX = 0;
+  let touchEndX = 0;
+  const SWIPE_THRESHOLD = 50;
+
+  document.addEventListener('touchstart', e => {
+    touchStartX = e.changedTouches[0].screenX;
+  }, { passive: true });
+
+  document.addEventListener('touchend', e => {
+    touchEndX = e.changedTouches[0].screenX;
+    const diff = touchStartX - touchEndX;
+    if (Math.abs(diff) > SWIPE_THRESHOLD && state.currentView === 'daily' && window.innerWidth < 768) {
+      if (diff > 0) navNext();
+      else navPrev();
+    }
+  }, { passive: true });
 
   // Budget panel
   dom.dashEditBudget.addEventListener('click', () => {
@@ -906,6 +1400,11 @@ function setupEventListeners() {
     clearBudget();
     closePanels();
   });
+
+  // Export button (desktop header)
+  if (dom.exportBtn) {
+    dom.exportBtn.addEventListener('click', exportCSV);
+  }
 
   // Goal panel
   dom.dashGoalAction.addEventListener('click', () => {
@@ -935,12 +1434,9 @@ function setupEventListeners() {
   });
   dom.deleteGoalBtn.addEventListener('click', deleteGoal);
 
-  // Export
-  dom.exportBtn.addEventListener('click', exportCSV);
-
   // Ripple on buttons
   document.addEventListener('click', e => {
-    const btn = e.target.closest('.btn, .header-btn, .fab, .nav-btn, .pill, .card__action');
+    const btn = e.target.closest('.btn, .header-btn, .fab, .nav-btn, .pill, .card__action, .category-chip, .stat-chip, .summary-manage-btn, .bottom-nav__item');
     if (btn) createRipple(e, btn);
   });
 
@@ -955,11 +1451,25 @@ function init() {
   loadState();
   applyTheme(state.theme);
   populateCategories();
+  renderCategoryChips();
 
   // Set default date for today
   dom.expenseDate.value = toDateStr(new Date());
 
   updateProfile();
+
+  // Populate mobile filter select
+  CATEGORIES.forEach(cat => {
+    const opt = document.createElement('option');
+    opt.value = cat.id;
+    opt.textContent = `${cat.emoji} ${cat.label}`;
+    dom.mobileFilterSelect.appendChild(opt);
+  });
+
+  // Set initial tab
+  setTab('summary');
+
+  setupEventListeners();
   renderAll();
 
   // Set active pill
@@ -967,7 +1477,8 @@ function init() {
     p.classList.toggle('pill--active', p.dataset.view === state.currentView);
   });
 
-  setupEventListeners();
+  // Hide mobile search input by default
+  dom.mobileSearchInput.style.display = 'none';
 }
 
 document.addEventListener('DOMContentLoaded', init);
